@@ -29,16 +29,12 @@ jobs:
             substituters = https://cache.nixos.org/ https://cache.garnix.io/ https://nix-community.cachix.org
             trusted-public-keys = cache.garnix.io:CTFPyKSLcx5RMJKfLo5EEPUObbA78b0YQ2DTCJXqr9g= cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs=
 
-      - name: Wait for Garnix image build
-        uses: ./.github/actions/wait-for-garnix
-        with:
-          package: 'docker-psyche-solana-client [x86_64-linux]'
-
-      - name: Download image from Garnix cache
+      - name: Build image (uses Garnix/Nix binary cache if available)
         run: |
           nix build .#docker-psyche-solana-client --no-link --print-out-paths > image-path.txt
 
       - name: Push image to GHCR
+        id: push
         run: |
           IMAGE_PATH=$(cat image-path.txt)
           SHORT_SHA=$(git rev-parse --short HEAD)
@@ -57,3 +53,12 @@ jobs:
             --dest-creds "${CREDS}" \
             "docker://${IMAGE_NAME}:latest" \
             "docker://${IMAGE_NAME}:sha-${SHORT_SHA}"
+
+          # Print the image digest so it can be pinned in deployment manifests
+          DIGEST=$(skopeo inspect \
+            --creds "${CREDS}" \
+            "docker://${IMAGE_NAME}:latest" \
+            | jq -r '.Digest')
+          echo "Image pushed: ${IMAGE_NAME}@${DIGEST}"
+          echo "image_digest=${DIGEST}" >> "$GITHUB_OUTPUT"
+          echo "image_ref=${IMAGE_NAME}@${DIGEST}" >> "$GITHUB_OUTPUT"
