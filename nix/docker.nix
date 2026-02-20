@@ -136,7 +136,7 @@ let
         Env = [
           "NVIDIA_DRIVER_CAPABILITIES=all"
           "NVIDIA_VISIBLE_DEVICES=all"
-          "LD_LIBRARY_PATH=${lib.makeLibraryPath cudaRuntimeLibs}:/lib:/usr/lib"
+          "LD_LIBRARY_PATH=${lib.makeLibraryPath cudaRuntimeLibs}:/usr/local/nvidia/lib64:/lib:/usr/lib"
           "LOGNAME=root"
           "TORCHINDUCTOR_CACHE_DIR=/tmp/torchinductor"
           "PYTHONUNBUFFERED=1"
