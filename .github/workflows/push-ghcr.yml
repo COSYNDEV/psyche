@@ -1,0 +1,59 @@
+name: Push Client Image to GHCR
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  push-ghcr:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Free Disk Space (Ubuntu)
+        uses: jlumbroso/free-disk-space@main
+
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: nixbuild/nix-quick-install-action@v31
+        with:
+          nix_conf: |
+            download-buffer-size = 524288000
+            accept-flake-config = true
+            substituters = https://cache.nixos.org/ https://cache.garnix.io/ https://nix-community.cachix.org
+            trusted-public-keys = cache.garnix.io:CTFPyKSLcx5RMJKfLo5EEPUObbA78b0YQ2DTCJXqr9g= cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs=
+
+      - name: Wait for Garnix image build
+        uses: ./.github/actions/wait-for-garnix
+        with:
+          package: 'docker-psyche-solana-client [x86_64-linux]'
+
+      - name: Download image from Garnix cache
+        run: |
+          nix build .#docker-psyche-solana-client --no-link --print-out-paths > image-path.txt
+
+      - name: Push image to GHCR
+        run: |
+          IMAGE_PATH=$(cat image-path.txt)
+          SHORT_SHA=$(git rev-parse --short HEAD)
+          IMAGE_NAME="ghcr.io/${{ github.repository_owner }}/psyche-client"
+          CREDS="${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}"
+
+          # Stream the Nix image directly to GHCR as :latest
+          "$IMAGE_PATH" | skopeo copy \
+            --dest-creds "${CREDS}" \
+            docker-archive:/dev/stdin \
+            "docker://${IMAGE_NAME}:latest"
+
+          # Copy :latest to a SHA-pinned tag (registry-to-registry, no re-streaming)
+          skopeo copy \
+            --src-creds "${CREDS}" \
+            --dest-creds "${CREDS}" \
+            "docker://${IMAGE_NAME}:latest" \
+            "docker://${IMAGE_NAME}:sha-${SHORT_SHA}"

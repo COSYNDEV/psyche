@@ -93,37 +93,50 @@ let
       };
     };
 
+  cudaRuntimeLibs = lib.optionals pkgs.config.cudaSupport (
+    with pkgs.cudaPackages;
+    [
+      cuda_cudart
+      cudatoolkit
+      nccl
+    ]
+  );
+
   dockerPackages = {
     docker-psyche-solana-client = pkgs.dockerTools.streamLayeredImage {
       name = "psyche-solana-client";
       tag = "latest";
 
-      contents = with pkgs; [
-        bashInteractive
-        cacert
-        coreutils
-        stdenv.cc
-        rdma-core
-        rustPackages."psyche-solana-client"
-        rustPackages."psyche-centralized-client"
-        rustPackages."inference"
-        rustPackages."train"
-        rustPackages."bandwidth_test"
-        rustPackages."psyche-sidecar"
-        python3Packages.huggingface-hub
-        (pkgs.runCommand "entrypoint" { } ''
-          mkdir -p $out/bin $out/etc $out/tmp $out/var/tmp $out/run
-          cp ${../docker/train_entrypoint.sh} $out/bin/train_entrypoint.sh
-          cp ${../docker/sidecar_entrypoint.sh} $out/bin/sidecar_entrypoint.sh
-          chmod +x $out/bin/train_entrypoint.sh
-          chmod +x $out/bin/sidecar_entrypoint.sh
-        '')
-      ];
+      contents =
+        with pkgs;
+        [
+          bashInteractive
+          cacert
+          coreutils
+          stdenv.cc
+          rdma-core
+          rustPackages."psyche-solana-client"
+          rustPackages."psyche-centralized-client"
+          rustPackages."inference"
+          rustPackages."train"
+          rustPackages."bandwidth_test"
+          rustPackages."psyche-sidecar"
+          python3Packages.huggingface-hub
+          (pkgs.runCommand "entrypoint" { } ''
+            mkdir -p $out/bin $out/etc $out/tmp $out/var/tmp $out/run
+            cp ${../docker/train_entrypoint.sh} $out/bin/train_entrypoint.sh
+            cp ${../docker/sidecar_entrypoint.sh} $out/bin/sidecar_entrypoint.sh
+            chmod +x $out/bin/train_entrypoint.sh
+            chmod +x $out/bin/sidecar_entrypoint.sh
+          '')
+        ]
+        ++ cudaRuntimeLibs;
 
       config = {
         Env = [
           "NVIDIA_DRIVER_CAPABILITIES=all"
-          "LD_LIBRARY_PATH=/lib:/usr/lib"
+          "NVIDIA_VISIBLE_DEVICES=all"
+          "LD_LIBRARY_PATH=${lib.makeLibraryPath cudaRuntimeLibs}:/lib:/usr/lib"
           "LOGNAME=root"
           "TORCHINDUCTOR_CACHE_DIR=/tmp/torchinductor"
           "PYTHONUNBUFFERED=1"
