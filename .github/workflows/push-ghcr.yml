@@ -38,7 +38,7 @@ jobs:
         run: |
           IMAGE_PATH=$(cat image-path.txt)
           SHORT_SHA=$(git rev-parse --short HEAD)
-          IMAGE_NAME="ghcr.io/${{ github.repository_owner }}/psyche-client"
+          IMAGE_NAME="ghcr.io/$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')/psyche-client"
           CREDS="${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}"
 
           # Stream the Nix image directly to GHCR as :latest
