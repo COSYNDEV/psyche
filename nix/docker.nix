@@ -97,6 +97,7 @@ let
     with pkgs.cudaPackages;
     [
       cuda_cudart
+      cuda_compat # provides libcuda.so.1 - communicates with NVIDIA kernel module via /dev/nvidiactl
       cudatoolkit
       nccl
     ]
