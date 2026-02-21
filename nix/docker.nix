@@ -115,7 +115,7 @@ let
           coreutils
           stdenv.cc
           rdma-core
-          rustPackages."psyche-solana-client"
+          rustPackages."psyche-solana-client".unwrapped
           rustPackages."psyche-centralized-client"
           rustPackages."inference"
           rustPackages."train"

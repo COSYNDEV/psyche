@@ -531,6 +531,7 @@ let
       {
         nativeBuildInputs = [ pkgs.makeWrapper ];
         meta.mainProgram = package.meta.mainProgram;
+        passthru = { unwrapped = package; };
       }
       ''
         mkdir -p $out/bin
