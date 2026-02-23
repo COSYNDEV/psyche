@@ -102,6 +102,19 @@ let
     ]
   );
 
+  nvidiaUserSpaceLibs = lib.optionals pkgs.config.cudaSupport [
+    ((pkgs.linuxPackages.nvidiaPackages.dc.override {
+      libsOnly = true;
+      kernel = null;
+    }).overrideAttrs (old: let version = "580.95.05"; in {
+      inherit version;
+      src = pkgs.fetchurl {
+        url = "https://us.download.nvidia.com/tesla/${version}/NVIDIA-Linux-x86_64-${version}.run";
+        sha256 = "sha256-hJ7w746EK5gGss3p8RwTA9VPGpp2lGfk5dlhsv4Rgqc=";
+      };
+    }))
+  ];
+
   dockerPackages = {
     docker-psyche-solana-client = pkgs.dockerTools.streamLayeredImage {
       name = "psyche-solana-client";
@@ -115,7 +128,9 @@ let
           coreutils
           stdenv.cc
           rdma-core
-          rustPackages."psyche-solana-client"
+          dockerTools.fakeNss
+          dockerTools.usrBinEnv
+          rustPackages."psyche-solana-client".unwrapped
           rustPackages."psyche-centralized-client"
           rustPackages."inference"
           rustPackages."train"
@@ -128,15 +143,19 @@ let
             cp ${../docker/sidecar_entrypoint.sh} $out/bin/sidecar_entrypoint.sh
             chmod +x $out/bin/train_entrypoint.sh
             chmod +x $out/bin/sidecar_entrypoint.sh
+            ln -s ${bashInteractive}/bin/bash $out/bin/bash
+            ln -s ${bashInteractive}/bin/bash $out/bin/sh
           '')
         ]
-        ++ cudaRuntimeLibs;
+        ++ cudaRuntimeLibs
+        ++ nvidiaUserSpaceLibs;
 
       config = {
         Env = [
           "NVIDIA_DRIVER_CAPABILITIES=all"
           "NVIDIA_VISIBLE_DEVICES=all"
-          "LD_LIBRARY_PATH=${lib.makeLibraryPath cudaRuntimeLibs}:/lib:/usr/lib"
+          "LD_LIBRARY_PATH=${lib.makeLibraryPath (cudaRuntimeLibs ++ nvidiaUserSpaceLibs)}:/usr/local/nvidia/lib64:/lib:/usr/lib"
+          "PATH=${lib.makeBinPath (with pkgs; [ bashInteractive coreutils findutils gnugrep ])}:/bin:/usr/bin"
           "LOGNAME=root"
           "TORCHINDUCTOR_CACHE_DIR=/tmp/torchinductor"
           "PYTHONUNBUFFERED=1"

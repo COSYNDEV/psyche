@@ -9,6 +9,24 @@ if [[ "${PSYCHE_MAIN_HOST:-}" != "" ]]; then
     exec /bin/sidecar_entrypoint.sh
 fi
 
+# GPU diagnostics
+echo "=== GPU DIAGNOSTICS ==="
+echo "LD_LIBRARY_PATH=${LD_LIBRARY_PATH:-<not set>}"
+echo "NVIDIA_VISIBLE_DEVICES=${NVIDIA_VISIBLE_DEVICES:-<not set>}"
+echo "NVIDIA_DRIVER_CAPABILITIES=${NVIDIA_DRIVER_CAPABILITIES:-<not set>}"
+ls /usr/local/nvidia/lib64/ 2>/dev/null && echo "Found /usr/local/nvidia/lib64" || echo "No /usr/local/nvidia/lib64"
+ls /dev/nvidia* 2>/dev/null || echo "No /dev/nvidia* devices found"
+echo "Host kernel driver version:"
+cat /proc/driver/nvidia/version 2>/dev/null || \
+  cat /sys/module/nvidia/version 2>/dev/null || \
+  echo "Cannot determine driver version"
+echo "Searching for libcuda in LD_LIBRARY_PATH dirs:"
+IFS=':' read -ra _LIB_DIRS <<< "${LD_LIBRARY_PATH:-}"
+for _dir in "${_LIB_DIRS[@]}"; do
+  ls "$_dir"/libcuda* 2>/dev/null && echo "  ^ in $_dir"
+done
+echo "=== END DIAGNOSTICS ==="
+
 # Some sanity checks before starting
 
 if [[ "${NVIDIA_DRIVER_CAPABILITIES:-}" == "" ]]; then

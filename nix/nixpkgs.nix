@@ -46,6 +46,7 @@ in
 
     config = {
       allowUnfree = true;
+      nvidia.acceptLicense = true;
       metalSupport = lib.mkDefault false;
     }
     // lib.optionalAttrs cudaSupported {
