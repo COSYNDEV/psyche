@@ -349,13 +349,22 @@ where
             };
             debug!("Using relay servers: {}", fmt_relay_mode(&relay_mode));
 
-            let endpoint = Endpoint::builder()
+            let force_relay_only = std::env::var("FORCE_RELAY_ONLY").is_ok_and(|v| !v.is_empty());
+
+            let endpoint_builder = Endpoint::builder()
                 .secret_key(secret_key)
                 .relay_mode(relay_mode)
                 .transport_config(transport_config)
-                .bind_addr(SocketAddrV4::new(ipv4, port.unwrap_or(0)))?
+                .clear_ip_transports()
                 .clear_address_lookup()
                 .hooks(connection_monitor.clone());
+
+            let endpoint = if force_relay_only {
+                debug!("FORCE_RELAY_ONLY enabled: skipping direct UDP transport");
+                endpoint_builder
+            } else {
+                endpoint_builder.bind_addr(SocketAddrV4::new(ipv4, port.unwrap_or(0)))?
+            };
 
             let endpoint = match discovery_mode {
                 DiscoveryMode::Local => {
