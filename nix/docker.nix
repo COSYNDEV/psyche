@@ -106,11 +106,11 @@ let
     ((pkgs.linuxPackages.nvidiaPackages.dc.override {
       libsOnly = true;
       kernel = null;
-    }).overrideAttrs (old: let version = "580.95.05"; in {
+    }).overrideAttrs (old: let version = "580.126.09"; in {
       inherit version;
       src = pkgs.fetchurl {
         url = "https://us.download.nvidia.com/tesla/${version}/NVIDIA-Linux-x86_64-${version}.run";
-        sha256 = "sha256-hJ7w746EK5gGss3p8RwTA9VPGpp2lGfk5dlhsv4Rgqc=";
+        sha256 = "sha256-TKxT5I+K3/Zh1HyHiO0kBZokjJ/YCYzq/QiKSYmG7CY=";
       };
     }))
   ];
